@@ -26,11 +26,15 @@ fi
 
 rescue() {
     say "$*"
-    say "dropping to a rescue shell"
+    say "dropping to a rescue shell; block devices the kernel sees:"
+    cat /proc/partitions 2>/dev/null
+    # PID 1 must never exit or the kernel panics, so no exec and a final loop.
     if command -v cttyhack >/dev/null 2>&1; then
-        exec setsid cttyhack /bin/sh
+        setsid cttyhack /bin/sh
+    else
+        /bin/sh
     fi
-    exec /bin/sh
+    while true; do sleep 60; done
 }
 
 mount -t proc proc /proc

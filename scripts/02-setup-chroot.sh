@@ -13,4 +13,8 @@ mountpoint -q "$ROOTFS/proc" || mount -t proc proc "$ROOTFS/proc"
 mountpoint -q "$ROOTFS/sys"  || mount --rbind /sys "$ROOTFS/sys"
 mountpoint -q "$ROOTFS/dev"  || mount --rbind /dev "$ROOTFS/dev"
 
+# Stop mount events inside the chroot from propagating back to the host.
+mount --make-rslave "$ROOTFS/sys"
+mount --make-rslave "$ROOTFS/dev"
+
 echo "Chroot ready at $ROOTFS"

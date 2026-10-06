@@ -1,0 +1,15 @@
+kernel/fs/squashfs
+kernel/fs/overlayfs
+kernel/fs/isofs
+kernel/fs/fat
+kernel/fs/nls
+kernel/drivers/block/loop.ko
+kernel/drivers/block/virtio_blk.ko
+kernel/drivers/cdrom
+kernel/drivers/scsi
+kernel/drivers/message/fusion
+kernel/drivers/ata
+kernel/drivers/nvme
+kernel/drivers/usb/storage
+kernel/drivers/usb/host
+kernel/drivers/virtio

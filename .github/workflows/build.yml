@@ -10,20 +10,67 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
 
       - name: Build XoRlOS ISO
-        run: sudo ./scripts/build.sh
+        run: sudo ./scripts/build.sh 2>&1 | tee build.log
+
+      - name: Annotate build failure
+        if: failure()
+        run: |
+          msg=$(tail -n 40 build.log | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
+          echo "::error title=build.log tail::${msg}"
 
       - name: Checksum
         run: sudo sh -c 'cd build && sha256sum xorlos.iso > xorlos.iso.sha256 && cat xorlos.iso.sha256 && ls -lh xorlos.iso'
 
+      - name: Boot test (QEMU)
+        run: |
+          sudo apt-get install -y qemu-system-x86
+          accel=""
+          [ -e /dev/kvm ] && accel="-enable-kvm"
+          sudo timeout 300 qemu-system-x86_64 $accel -m 2048 \
+            -cdrom build/xorlos.iso -boot d \
+            -display none -monitor none -serial file:boot.log -no-reboot \
+            > qemu.err 2>&1 &
+          touch boot.log
+          for i in $(seq 1 150); do
+            grep -q 'login:' boot.log && break
+            sleep 2
+          done
+          sudo pkill qemu-system || true
+          echo "---- boot.log (tail) ----"
+          tail -n 60 boot.log
+          grep -q 'xorlos-init: root mounted' boot.log || { echo "init did not reach switch_root"; exit 1; }
+          grep -q 'login:' boot.log || { echo "no login prompt"; exit 1; }
+
+      - name: Annotate boot failure
+        if: failure()
+        run: |
+          [ -f boot.log ] || exit 0
+          msg=$(tail -n 40 boot.log | sed 's/%/%25/g' | tr -d '\r' | awk '{printf "%s%%0A", $0}')
+          echo "::error title=boot.log tail::${msg}"
+
       - name: Upload ISO
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
           name: xorlos-iso
           path: |
             build/xorlos.iso
             build/xorlos.iso.sha256
-          if-no-files-found: error
+          if-no-files-found: warn
+
+      - name: Upload boot log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: boot-log
+          path: |
+            boot.log
+            build.log
+          if-no-files-found: ignore

@@ -15,6 +15,17 @@ if [ "$(id -u)" -ne 0 ]; then
     exit 1
 fi
 
+# Install host build dependencies on Debian/Ubuntu if any are missing.
+need=""
+for t in curl tar mksquashfs xorriso grub-mkrescue; do
+    command -v "$t" >/dev/null 2>&1 || need="yes"
+done
+if [ -n "$need" ] && command -v apt-get >/dev/null 2>&1; then
+    apt-get update
+    apt-get install -y curl squashfs-tools xorriso mtools \
+        grub-pc-bin grub-efi-amd64-bin grub-common
+fi
+
 mkdir -p "$BUILD_DIR"
 
 for stage in "$ROOT"/scripts/0*.sh; do

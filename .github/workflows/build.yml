@@ -1,0 +1,29 @@
+name: Build ISO
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build XoRlOS ISO
+        run: sudo ./scripts/build.sh
+
+      - name: Checksum
+        run: sha256sum build/xorlos.iso | tee build/xorlos.iso.sha256
+
+      - name: Upload ISO
+        uses: actions/upload-artifact@v4
+        with:
+          name: xorlos-iso
+          path: |
+            build/xorlos.iso
+            build/xorlos.iso.sha256
+          if-no-files-found: error

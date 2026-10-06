@@ -18,10 +18,19 @@ NEW=/mnt/new
 
 say() { echo "xorlos-init: $*"; }
 
+# The initramfs only links a few BusyBox applets by default; link them all
+# (sleep, setsid, cttyhack, ...).
+if [ -x /bin/busybox ]; then
+    /bin/busybox --install -s 2>/dev/null
+fi
+
 rescue() {
     say "$*"
     say "dropping to a rescue shell"
-    exec setsid cttyhack /bin/sh 2>/dev/null || exec /bin/sh
+    if command -v cttyhack >/dev/null 2>&1; then
+        exec setsid cttyhack /bin/sh
+    fi
+    exec /bin/sh
 }
 
 mount -t proc proc /proc
